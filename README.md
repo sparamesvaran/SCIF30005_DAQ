@@ -25,7 +25,7 @@ PICO_SDK_PATH=$( readlink -f $(pwd)/ ); export PICO_SDK_PATH=${PICO_SDK_PATH};
 cd ..
 
 # 5. Get a copy of the Pico DAQ repository, and set up a build directory.
-git clone 
+git clone https://github.com/sparamesvaran/SCIF30005_DAQ.git
 cd SCIF30005_DAQ
 mkdir build
 cd build
