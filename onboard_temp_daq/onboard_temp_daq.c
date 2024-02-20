@@ -53,22 +53,33 @@ int main() {
     adc_select_input(4);
         
     while (true) {
-    
+
+        // get the value of the Pico hardware timer before the ADC read operation
+        uint64_t ticks_before_read = time_us_64();
+
         // read the temperature from the ADC, and convert to a float
         float temperature = read_onboard_temperature(TEMPERATURE_UNITS);
 
         // get the time at which the temperature data was obtained
         uint64_t sample_timestamp = time_us_64();
-                
+
         // send the temperature data along with its timestamp
         printf("Onboard temperature @ %llu = %.02f %c\n", sample_timestamp, temperature, TEMPERATURE_UNITS);
         
+        // get the value of the Pico hardware timer after the data send operation (WS3)
+        uint64_t ticks_after_send = time_us_64();
+
+        // calculate time taken to perform reading and sending to data, and send information to screen (WS3)
+        uint64_t ticks_to_read = sample_timestamp - ticks_before_read;
+        uint64_t ticks_to_send = ticks_after_send - sample_timestamp;
+        printf("ticks taken to read data: %llu, ticks taken to send data: %llu\n\n", ticks_to_read, ticks_to_send);
+
         // flash the LED to indicate that the Pico is running
-        gpio_put(PICO_DEFAULT_LED_PIN, 1);
-        sleep_ms(10);
-        gpio_put(PICO_DEFAULT_LED_PIN, 0);
+        //gpio_put(PICO_DEFAULT_LED_PIN, 1);
+        //sleep_ms(10);
+        //gpio_put(PICO_DEFAULT_LED_PIN, 0);
         
         // artificially slow down the temperature reading and sending to a rate of ~0.5 Hz
-        sleep_ms(1990);        
+        //sleep_ms(1990);
     }
 }
