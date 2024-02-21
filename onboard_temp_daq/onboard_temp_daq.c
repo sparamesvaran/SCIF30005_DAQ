@@ -65,11 +65,11 @@ int main() {
 
         // send the temperature data along with its timestamp
         printf("Onboard temperature @ %llu = %.02f %c\n", sample_timestamp, temperature, TEMPERATURE_UNITS);
-        
-        // get the value of the Pico hardware timer after the data send operation (WS3)
+
+        // get the value of the Pico hardware timer after the data send operation
         uint64_t ticks_after_send = time_us_64();
 
-        // calculate time taken to perform reading and sending to data, and send information to screen (WS3)
+        // calculate time taken to perform reading and sending to data, and send information to screen
         uint64_t ticks_to_read = sample_timestamp - ticks_before_read;
         uint64_t ticks_to_send = ticks_after_send - sample_timestamp;
         printf("ticks taken to read data: %llu, ticks taken to send data: %llu\n\n", ticks_to_read, ticks_to_send);

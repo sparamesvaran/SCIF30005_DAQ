@@ -21,3 +21,4 @@ add_compile_options(-Wall
         )
 
 add_subdirectory(onboard_temp_daq)
+add_subdirectory(onboard_temp_daq_multicore)
