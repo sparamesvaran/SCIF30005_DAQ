@@ -59,16 +59,16 @@ int main() {
 
         // get the time at which the temperature data was obtained
         uint64_t sample_timestamp = time_us_64();
-                
+
         // send the temperature data along with its timestamp
         printf("Onboard temperature @ %llu = %.02f %c\n", sample_timestamp, temperature, TEMPERATURE_UNITS);
-        
+
         // flash the LED to indicate that the Pico is running
-        gpio_put(PICO_DEFAULT_LED_PIN, 1);
-        sleep_ms(10);
-        gpio_put(PICO_DEFAULT_LED_PIN, 0);
+        //gpio_put(PICO_DEFAULT_LED_PIN, 1);
+        //sleep_ms(10);
+        //gpio_put(PICO_DEFAULT_LED_PIN, 0);
         
         // artificially slow down the temperature reading and sending to a rate of ~0.5 Hz
-        sleep_ms(1990);        
+        //sleep_ms(1990);
     }
 }
