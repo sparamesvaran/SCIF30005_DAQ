@@ -5,3 +5,7 @@ cmake-*
 build
 .DS_Store
 *.pdf
+*.root
+*.csv
+*.dat
+*.hdf5
