@@ -21,6 +21,9 @@
 #define FLAG_VALUE 123
 #define ADC_QUEUE_SIZE 1
 
+#define STOP_ADC_READ_IF_QUEUE_FULL true
+#define PICO_ADC_READ_SLEEP_US 3800
+
 typedef struct
 {
     uint64_t timestamp;
@@ -83,13 +86,20 @@ void core1_temperature_read() {
         }
         else
         {
-            uint64_t ticks_end=time_us_64();
-            uint64_t end_start_diff = ticks_end - ticks_start;
-            printf("queue full after %llu samples sent, and %llu ticks!\n", samples_sent, end_start_diff);
-            break;
+            if (STOP_ADC_READ_IF_QUEUE_FULL)
+            {
+                uint64_t ticks_end=time_us_64();
+                uint64_t end_start_diff = ticks_end - ticks_start;
+                printf("queue full after %llu samples sent, and %llu ticks!\n", samples_sent, end_start_diff);
+                break;
+            }
+            else
+            {
+                continue;
+            }
         }
         // equalise (approximately) sampling and send-out rates
-        sleep_us(3800);
+        sleep_us(PICO_ADC_READ_SLEEP_US);
     }
 }
 
