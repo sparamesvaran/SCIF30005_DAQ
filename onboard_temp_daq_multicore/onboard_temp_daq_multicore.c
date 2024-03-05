@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <inttypes.h>
 
 #include "pico/stdlib.h"
 #include "hardware/adc.h"
@@ -19,9 +20,9 @@
 /* Choose 'C' for Celsius or 'F' for Fahrenheit. */
 #define TEMPERATURE_UNITS 'C'
 #define FLAG_VALUE 123
-#define ADC_QUEUE_SIZE 1
+#define ADC_QUEUE_SIZE 20
 
-#define STOP_ADC_READ_IF_QUEUE_FULL true
+#define STOP_ADC_READ_IF_QUEUE_FULL false
 #define PICO_ADC_READ_SLEEP_US 3800
 
 typedef struct
@@ -99,7 +100,7 @@ void core1_temperature_read() {
             }
         }
         // equalise (approximately) sampling and send-out rates
-        sleep_us(PICO_ADC_READ_SLEEP_US);
+        //sleep_us(PICO_ADC_READ_SLEEP_US);
     }
 }
 
@@ -110,6 +111,8 @@ int main() {
     gpio_init(PICO_DEFAULT_LED_PIN);
     gpio_set_dir(PICO_DEFAULT_LED_PIN, GPIO_OUT);
 #endif
+
+    //stdio_set_translate_crlf(&stdio_usb, false);
 
     /* Initialize hardware AD converter, enable onboard temperature sensor and
      *   select its channel (do this once for efficiency, but beware that this
@@ -150,16 +153,50 @@ int main() {
     // send core 1 the flag value back
     multicore_fifo_push_blocking(FLAG_VALUE);
 
-    while (true) {
+    uint events_to_send=1000;
 
-        // receive temp adc
+    uint64_t total_process_time=0;
+    uint64_t total_receive_time=0;
+    uint64_t total_send_time=0;
+    uint64_t n_sent=0;
+
+    while (n_sent<events_to_send)
+    {
+        uint64_t ticks_before_receive = time_us_64();
         adc_sample_t sample;
+
         queue_remove_blocking(&adc_queue, &sample);
 
-        // convert temperature to a float
-        float temperature = convert_adc_to_temperature(sample.adc, TEMPERATURE_UNITS);
+        // get the time at which the temperature data was obtained
+        uint64_t ticks_before_send = time_us_64();
+
+        fwrite(&sample.timestamp, sizeof(sample.timestamp), 1, stdout);
+        fwrite(&sample.adc, sizeof(sample.adc), 1, stdout);
+        fflush(stdout);
 
         // send the temperature data along with its timestamp
-        printf("Onboard temperature @ %llu = %.02f %c\n", sample.timestamp, temperature, TEMPERATURE_UNITS);
+        //printf("%" PRIx64 ",%x\n", sample.timestamp, sample.adc);
+
+        // get the value of the Pico hardware timer after the data send operation
+        uint64_t ticks_after_send = time_us_64();
+
+        // calculate time taken to perform reading and sending to data, and send information to screen
+        uint64_t ticks_to_receive = ticks_before_send - ticks_before_receive;
+        uint64_t ticks_to_send = ticks_after_send - ticks_before_send;
+        uint64_t ticks_total = ticks_after_send - ticks_before_receive;
+
+        total_process_time=total_process_time+ticks_total;
+        total_receive_time=total_receive_time+ticks_to_receive;
+        total_send_time=total_send_time+ticks_to_send;
+
+        //printf("ticks receive: %llu, ticks send: %llu, ticks total: %llu\n", ticks_to_receive, ticks_to_send, ticks_total);
+        ++n_sent;
     }
+    double average_process_time=(double)total_process_time/n_sent;
+    double average_send_time=(double)total_send_time/n_sent;
+    double average_receive_time=(double)total_receive_time/n_sent;
+
+    printf("ave. process time: %.4f",average_process_time);
+    printf("ave. send time: %.4f",average_send_time);
+    printf("ave. recv time: %.4f",average_receive_time);
 }
