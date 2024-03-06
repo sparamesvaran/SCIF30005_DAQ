@@ -153,12 +153,14 @@ int main() {
     // send core 1 the flag value back
     multicore_fifo_push_blocking(FLAG_VALUE);
 
-    uint events_to_send=1000;
+    uint events_to_send=1000000;
 
     uint64_t total_process_time=0;
     uint64_t total_receive_time=0;
     uint64_t total_send_time=0;
     uint64_t n_sent=0;
+    int16_t last_adc=-4096;
+    uint64_t last_timestamp=0;
 
     while (n_sent<events_to_send)
     {
@@ -167,12 +169,30 @@ int main() {
 
         queue_remove_blocking(&adc_queue, &sample);
 
+        ++n_sent;
+
         // get the time at which the temperature data was obtained
         uint64_t ticks_before_send = time_us_64();
 
-        fwrite(&sample.timestamp, sizeof(sample.timestamp), 1, stdout);
-        fwrite(&sample.adc, sizeof(sample.adc), 1, stdout);
-        fflush(stdout);
+        int16_t adc_diff = sample.adc-last_adc;
+        last_adc = sample.adc;
+
+        if (abs(adc_diff) > 40)
+        {
+            fwrite(&sample.adc, sizeof(sample.adc), 1, stdout);
+
+            if (last_timestamp == 0)
+            {
+                last_timestamp=sample.timestamp;
+                fwrite(&sample.timestamp, sizeof(sample.timestamp), 1, stdout);
+            }
+            else
+            {
+                uint8_t timestamp_diff = sample.timestamp - last_timestamp;
+                fwrite(&timestamp_diff, sizeof(timestamp_diff), 1, stdout);
+            }
+            fflush(stdout);
+        }
 
         // send the temperature data along with its timestamp
         //printf("%" PRIx64 ",%x\n", sample.timestamp, sample.adc);
@@ -190,13 +210,14 @@ int main() {
         total_send_time=total_send_time+ticks_to_send;
 
         //printf("ticks receive: %llu, ticks send: %llu, ticks total: %llu\n", ticks_to_receive, ticks_to_send, ticks_total);
-        ++n_sent;
     }
+
     double average_process_time=(double)total_process_time/n_sent;
     double average_send_time=(double)total_send_time/n_sent;
     double average_receive_time=(double)total_receive_time/n_sent;
 
-    printf("ave. process time: %.4f",average_process_time);
-    printf("ave. send time: %.4f",average_send_time);
-    printf("ave. recv time: %.4f",average_receive_time);
+    printf("ave. recv time: %.2f\n",average_receive_time);
+    printf("ave. send time: %.2f\n",average_send_time);
+    printf("ave. process time: %.2f\n",average_process_time);
+
 }
