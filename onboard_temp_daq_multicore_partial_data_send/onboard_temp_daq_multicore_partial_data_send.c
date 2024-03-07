@@ -11,6 +11,9 @@
 #include <inttypes.h>
 
 #include "pico/stdlib.h"
+#include "pico/stdio.h"
+#include "pico/stdio/driver.h"
+#include "pico/stdio_usb.h"
 #include "hardware/adc.h"
 #include "pico/multicore.h"
 
@@ -21,6 +24,8 @@
 #define TEMPERATURE_UNITS 'C'
 #define FLAG_VALUE 123
 #define ADC_QUEUE_SIZE 20
+
+#define CHUNK_FACTOR 512
 
 #define STOP_ADC_READ_IF_QUEUE_FULL false
 #define PICO_ADC_READ_SLEEP_US 3800
@@ -161,7 +166,13 @@ int main() {
     int16_t last_adc=-4096;
     uint64_t last_timestamp=0;
 
+    int8_t send_buffer[CHUNK_FACTOR];
+    uint32_t buffer_entries=0;
+
+    bool send_data_chunks=false;
+
     uint64_t ticks_before_process = time_us_64();
+
     while (n_sent<events_to_send)
     {
         uint64_t ticks_before_receive = time_us_64();
@@ -173,45 +184,54 @@ int main() {
 
         // get the time at which the temperature data was obtained
         uint64_t ticks_before_send = time_us_64();
+ 
+        if (last_timestamp == 0 )
+        {
+            fwrite(&sample.timestamp, sizeof(sample.timestamp), 1, stdout);
+            fwrite(&sample.adc, sizeof(sample.adc), 1, stdout);
+        }
+        else
+        {
+            uint8_t timestamp_diff = sample.timestamp - last_timestamp;
+            int8_t adc_diff = sample.adc-last_adc;
+            uint8_t sign = (adc_diff>0);
+            uint8_t pack=
+             ((sign&0x1) << 7) | (((uint8_t)adc_diff&0xf) << 3) | (timestamp_diff&0x7);
 
-        int8_t adc_diff = sample.adc-last_adc;
-
-        if (abs(adc_diff) > 0)
-        {   
-            if (last_adc == -4096)
-            {
-                fwrite(&sample.adc, sizeof(sample.adc), 1, stdout);
+             if (send_data_chunks)
+             {
+                send_buffer[buffer_entries]=pack;
+                buffer_entries++;
+                if (buffer_entries == CHUNK_FACTOR)
+                {
+                    fwrite(&send_buffer, sizeof(send_buffer[0]), buffer_entries, stdout);
+                    fflush(stdout);
+                    buffer_entries=0;
+                }
             }
             else
             {
-                fwrite(&adc_diff, sizeof(adc_diff), 1, stdout);
-            }
-
-
-            if (last_timestamp == 0 )
-            {
-                fwrite(&sample.timestamp, sizeof(sample.timestamp), 1, stdout);
-            }
-            else
-            {
-                uint8_t timestamp_diff = sample.timestamp - last_timestamp;
-                fwrite(&timestamp_diff, sizeof(timestamp_diff), 1, stdout);
+                fwrite(&pack, sizeof(pack), 1, stdout);
             }
         }
 
         last_adc = sample.adc;
         last_timestamp=sample.timestamp;
 
-        // get the value of the Pico hardware timer after the data send operation
         uint64_t ticks_after_send = time_us_64();
 
-        // calculate time taken to perform reading and sending to data, and send information to screen
+        // calculate time taken to perform tasks
         uint64_t ticks_to_receive = ticks_before_send - ticks_before_receive;
         uint64_t ticks_to_send = ticks_after_send - ticks_before_send;
 
         total_receive_time=total_receive_time+ticks_to_receive;
         total_send_time=total_send_time+ticks_to_send;
     }
+    if (send_data_chunks)
+    {
+        fflush(stdout);
+    }
+
     uint64_t ticks_after_process = time_us_64();
     uint64_t total_process_time = ticks_after_process - ticks_before_process;
 
@@ -219,7 +239,9 @@ int main() {
     double average_send_time=(double)total_send_time/n_sent;
     double average_receive_time=(double)total_receive_time/n_sent;
 
-    printf("ave. recv time: %.2f\n",average_receive_time);
+    sleep_ms(1000);
+
+    printf("\nave. recv time: %.2f\n",average_receive_time);
     printf("ave. send time: %.2f\n",average_send_time);
     printf("ave. process time: %.2f\n",average_process_time);
 
