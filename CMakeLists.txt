@@ -22,3 +22,6 @@ add_compile_options(-Wall
 
 add_subdirectory(onboard_temp_daq)
 add_subdirectory(onboard_temp_daq_multicore)
+add_subdirectory(onboard_temp_daq_multicore_binary_send)
+add_subdirectory(onboard_temp_daq_multicore_partial_data_send)
+add_subdirectory(onboard_temp_daq_multicore_buffer)
