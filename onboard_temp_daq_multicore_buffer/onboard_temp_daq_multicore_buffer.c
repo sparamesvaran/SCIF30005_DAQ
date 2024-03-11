@@ -142,7 +142,7 @@ int main() {
         char c = getchar_timeout_us(0);        
         if(c == 13)
         {
-            printf("Hello, multicore!\n");
+            printf("Hello, multicore! I will send %llu samples!\n",events_to_send);
             break;
         }
     }
