@@ -25,6 +25,8 @@
 #define STOP_ADC_READ_IF_QUEUE_FULL false
 #define PICO_ADC_READ_SLEEP_US 3800
 
+uint64_t events_to_send=500;
+
 typedef struct
 {
     uint64_t timestamp;
@@ -131,7 +133,7 @@ int main() {
         char c = getchar_timeout_us(0);        
         if(c == 13)
         {
-            printf("Hello, multicore!\n");
+            printf("Hello, multicore! I will send %llu samples!\n",events_to_send);
             break;
         }
     }
@@ -152,8 +154,6 @@ int main() {
 
     // send core 1 the flag value back
     multicore_fifo_push_blocking(FLAG_VALUE);
-
-    uint events_to_send=500000;
 
     uint64_t total_process_time=0;
     uint64_t total_receive_time=0;

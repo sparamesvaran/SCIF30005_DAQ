@@ -25,10 +25,12 @@
 #define FLAG_VALUE 123
 #define ADC_QUEUE_SIZE 20
 
-#define CHUNK_FACTOR 512
+#define CHUNK_FACTOR 256
 
 #define STOP_ADC_READ_IF_QUEUE_FULL false
 #define PICO_ADC_READ_SLEEP_US 3800
+
+uint64_t events_to_send=100;
 
 typedef struct
 {
@@ -37,6 +39,9 @@ typedef struct
 } adc_sample_t;
 
 queue_t adc_queue;
+
+typedef uint16_t pack_t;
+bool debug=false;
 
 /* References for this implementation:
  * raspberry-pi-pico-c-sdk.pdf, Section '4.1.1. hardware_adc'
@@ -136,7 +141,7 @@ int main() {
         char c = getchar_timeout_us(0);        
         if(c == 13)
         {
-            printf("Hello, multicore!\n");
+            printf("Hello, multicore! I will send %llu samples! Pack size: %d Debug: %d\n", events_to_send, sizeof(pack_t), debug);
             break;
         }
     }
@@ -158,18 +163,16 @@ int main() {
     // send core 1 the flag value back
     multicore_fifo_push_blocking(FLAG_VALUE);
 
-    uint64_t events_to_send=500000;
-
     uint64_t total_receive_time=0;
     uint64_t total_send_time=0;
     uint64_t n_sent=0;
     int16_t last_adc=-4096;
     uint64_t last_timestamp=0;
 
-    int8_t send_buffer[CHUNK_FACTOR];
+    pack_t send_buffer[CHUNK_FACTOR];
     uint32_t buffer_entries=0;
 
-    bool send_data_chunks=false;
+    bool send_data_chunks=true;
 
     uint64_t ticks_before_process = time_us_64();
 
@@ -194,12 +197,21 @@ int main() {
         {
             uint8_t timestamp_diff = sample.timestamp - last_timestamp;
             int8_t adc_diff = sample.adc-last_adc;
+            uint8_t adc_diff_mag=abs(adc_diff);
             uint8_t sign = (adc_diff>0);
-            uint8_t pack=
-             ((sign&0x1) << 7) | (((uint8_t)adc_diff&0xf) << 3) | (timestamp_diff&0x7);
+            
+            pack_t pack;
+            if (sizeof(pack_t) == 1)
+            {
+                pack = ((sign&0x1) << 7) | ((adc_diff_mag&0xf) << 3) | (timestamp_diff&0x7);
+            }
+            else if (sizeof(pack_t) == 2)
+            {
+                pack = (adc_diff<<8) | timestamp_diff ;
+            }
 
-             if (send_data_chunks)
-             {
+            if (send_data_chunks)
+            {
                 send_buffer[buffer_entries]=pack;
                 buffer_entries++;
                 if (buffer_entries == CHUNK_FACTOR)
@@ -212,6 +224,14 @@ int main() {
             else
             {
                 fwrite(&pack, sizeof(pack), 1, stdout);
+                if (debug)
+                {
+                    fflush(stdout);
+                }
+            }
+            if (debug)
+            {
+                printf("%d,%d\n",timestamp_diff,adc_diff);
             }
         }
 
@@ -227,7 +247,7 @@ int main() {
         total_receive_time=total_receive_time+ticks_to_receive;
         total_send_time=total_send_time+ticks_to_send;
     }
-    if (send_data_chunks)
+    if (!send_data_chunks)
     {
         fflush(stdout);
     }
