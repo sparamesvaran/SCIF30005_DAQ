@@ -25,8 +25,6 @@
 #define FLAG_VALUE 123
 #define ADC_QUEUE_SIZE 20
 
-#define CHUNK_FACTOR 256
-
 #define STOP_ADC_READ_IF_QUEUE_FULL false
 #define PICO_ADC_READ_SLEEP_US 3800
 
@@ -169,11 +167,6 @@ int main() {
     int16_t last_adc=-4096;
     uint64_t last_timestamp=0;
 
-    pack_t send_buffer[CHUNK_FACTOR];
-    uint32_t buffer_entries=0;
-
-    bool send_data_chunks=true;
-
     uint64_t ticks_before_process = time_us_64();
 
     while (n_sent<events_to_send)
@@ -210,27 +203,10 @@ int main() {
                 pack = (adc_diff<<8) | timestamp_diff ;
             }
 
-            if (send_data_chunks)
-            {
-                send_buffer[buffer_entries]=pack;
-                buffer_entries++;
-                if (buffer_entries == CHUNK_FACTOR)
-                {
-                    fwrite(&send_buffer, sizeof(send_buffer[0]), buffer_entries, stdout);
-                    fflush(stdout);
-                    buffer_entries=0;
-                }
-            }
-            else
-            {
-                fwrite(&pack, sizeof(pack), 1, stdout);
-                if (debug)
-                {
-                    fflush(stdout);
-                }
-            }
+            fwrite(&pack, sizeof(pack), 1, stdout);
             if (debug)
             {
+                fflush(stdout);
                 printf("%d,%d\n",timestamp_diff,adc_diff);
             }
         }
@@ -247,10 +223,7 @@ int main() {
         total_receive_time=total_receive_time+ticks_to_receive;
         total_send_time=total_send_time+ticks_to_send;
     }
-    if (!send_data_chunks)
-    {
-        fflush(stdout);
-    }
+    fflush(stdout);
 
     uint64_t ticks_after_process = time_us_64();
     uint64_t total_process_time = ticks_after_process - ticks_before_process;

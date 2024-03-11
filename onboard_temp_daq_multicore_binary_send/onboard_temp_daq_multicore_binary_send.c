@@ -159,8 +159,6 @@ int main() {
     uint64_t total_receive_time=0;
     uint64_t total_send_time=0;
     uint64_t n_sent=0;
-    int16_t last_adc=-4096;
-    uint64_t last_timestamp=0;
 
     while (n_sent<events_to_send)
     {
