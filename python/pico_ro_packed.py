@@ -82,7 +82,6 @@ def temperature_readout(mode):
                                         print(f"calc:{timestamp_diff},{adc_diff}")
                                         print(diff_text)
 
-                        print(f"{n}:{timestamp},{adc}\n")
                         last_ts=timestamp
                         last_adc=adc
                 elif mode == 'binary':        
@@ -94,14 +93,14 @@ def temperature_readout(mode):
                         adc = int.from_bytes(adc_bytes, "little")
                 
                 temperature = convert_adc_to_temperature(adc)
-                #print(f"{timestamp},{adc},{temperature}")
+                print(f"{n}: {timestamp},{adc},{temperature}")
                 # csv
                 f_csv.write(f"{timestamp},{adc},{temperature}")
 
                 n+=1
 
         lines=0
-        while(lines<4):
+        while(lines<3):
                 benchmark_line = serial_device.readline()
                 benchmark_text = benchmark_line.decode()
                 print(benchmark_text)

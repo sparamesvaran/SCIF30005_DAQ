@@ -173,12 +173,12 @@ int main() {
         uint64_t ticks_before_send = time_us_64();
 
         // send the temperature data along with its timestamp
-        printf("%llu,%d\n", sample.timestamp, sample.adc);
+        //printf("%llu,%d\n", sample.timestamp, sample.adc);
 
         //printf("%" PRIx64 ",%x\n", sample.timestamp, sample.adc);
 
-        //fwrite(&sample.timestamp, sizeof(sample.timestamp), 1, stdout);
-        //fwrite(&sample.adc, sizeof(sample.adc), 1, stdout);
+        fwrite(&sample.timestamp, sizeof(sample.timestamp), 1, stdout);
+        fwrite(&sample.adc, sizeof(sample.adc), 1, stdout);
 
         // get the value of the Pico hardware timer after the data send operation
         uint64_t ticks_after_send = time_us_64();
@@ -192,14 +192,14 @@ int main() {
         total_receive_time=total_receive_time+ticks_to_receive;
         total_send_time=total_send_time+ticks_to_send;
     }
-    //fflush(stdout);
+    fflush(stdout);
     double average_process_time=(double)total_process_time/n_sent;
     double average_send_time=(double)total_send_time/n_sent;
     double average_receive_time=(double)total_receive_time/n_sent;
 
     sleep_ms(1000);
 
-    printf("\nave. recv time: %.2f\n",average_receive_time);
+    printf("ave. recv time: %.2f\n",average_receive_time);
     printf("ave. send time: %.2f\n",average_send_time);
     printf("ave. process time: %.2f\n",average_process_time);
 

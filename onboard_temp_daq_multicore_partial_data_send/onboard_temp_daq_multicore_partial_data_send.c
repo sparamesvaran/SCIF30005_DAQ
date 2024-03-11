@@ -234,7 +234,7 @@ int main() {
 
     sleep_ms(1000);
 
-    printf("\nave. recv time: %.2f\n",average_receive_time);
+    printf("ave. recv time: %.2f\n",average_receive_time);
     printf("ave. send time: %.2f\n",average_send_time);
     printf("ave. process time: %.2f\n",average_process_time);
 
